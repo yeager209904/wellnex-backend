@@ -36,8 +36,7 @@ def get_workout(muscles):
     for muscle in muscles:
         try:
             response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle})
-            if response.status_code != 200:
-                raise Exception(f"Failed to fetch workout data: {response.status_code}")
+            response.raise_for_status()
 
             data = response.json()
             muscle_exercises = [ex["name"] for ex in data.get("results", [])[:3]]
@@ -45,7 +44,7 @@ def get_workout(muscles):
                 exercises.append(f"{muscle.capitalize()} exercises: {', '.join(muscle_exercises)}")
             else:
                 exercises.append(f"No exercises found for {muscle}.")
-        except Exception as e:
+        except requests.RequestException as e:
             exercises.append(f"Error fetching workout for {muscle}: {str(e)}")
 
     return exercises
@@ -59,8 +58,7 @@ def get_meal(nutrients):
                 "apiKey": SPOONACULAR_API_KEY,
                 "query": nutrient
             })
-            if response.status_code != 200:
-                raise Exception(f"Failed to fetch meal data: {response.status_code}")
+            response.raise_for_status()
 
             data = response.json()
             nutrient_meals = [recipe["title"] for recipe in data.get("results", [])[:3]]
@@ -68,7 +66,7 @@ def get_meal(nutrients):
                 meals.append(f"{nutrient.capitalize()} meal options: {', '.join(nutrient_meals)}")
             else:
                 meals.append(f"No meal suggestions found for {nutrient}.")
-        except Exception as e:
+        except requests.RequestException as e:
             meals.append(f"Error fetching meal for {nutrient}: {str(e)}")
 
     return meals
@@ -77,9 +75,9 @@ def get_meal(nutrients):
 def get_ai_response(user_input, chat_history=[]):
     try:
         chat_history.append({"role": "user", "content": user_input})
-        response = openai.Chat.create(
-        model="gpt-4",
-        messages=chat_history
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=chat_history
         )
         ai_response = response['choices'][0]['message']['content']
         chat_history.append({"role": "assistant", "content": ai_response})
