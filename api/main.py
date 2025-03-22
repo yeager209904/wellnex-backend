@@ -56,6 +56,10 @@ def test_groq():
 def root():
     return {"status": "API is running"}
 
+@app.get("/test_groq")
+def test_groq():
+    return {"message": "Groq API is working!"}
+
 # Run the server
 if __name__ == "__main__":
     import uvicorn
