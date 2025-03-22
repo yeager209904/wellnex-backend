@@ -7,11 +7,11 @@
       }
     ],
     "routes": [
-      {
-        "src": "/(.*)",
-        "dest": "/api/main.py"
-      }
-    ],
+  {
+    "src": "/api/(.*)",
+    "dest": "api/main.py"
+  }
+],
     "env": {
       "APP_MODULE": "api.main:app"
     }
