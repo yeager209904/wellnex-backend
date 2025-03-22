@@ -34,31 +34,34 @@ class ChatRequest(BaseModel):
 @app.post("/test_groq")
 def test_groq():
     try:
-        response = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
-            messages=[{"role": "user", "content": "Say this is a test"}],
-            max_tokens=7,
-            temperature=0
-        )
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "mixtral-8x7b-32768",
+            "messages": [{"role": "user", "content": "Say this is a test"}],
+            "max_tokens": 7,
+            "temperature": 0
+        }
+        
+        response = requests.post(GROQ_API_URL, json=data, headers=headers)
+        response_json = response.json()
 
         # Debugging: Print full response
-        print("Groq API Response:", response)
+        print("Groq API Response:", response_json)
 
         # Ensure JSON response format
-        return {"response": response.choices[0].message.content.strip()}
+        return {"response": response_json["choices"][0]["message"]["content"].strip()}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Groq API request failed: {str(e)}")
-
 
 # Health check
 @app.get("/")
 def root():
     return {"status": "API is running"}
 
-@app.get("/test_groq")
-def test_groq():
-    return {"message": "Groq API is working!"}
 
 # Run the server
 if __name__ == "__main__":
