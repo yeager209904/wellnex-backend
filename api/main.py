@@ -13,6 +13,7 @@ load_dotenv()
 app = FastAPI()
 
 # OpenAI API setup
+openai.api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI()
 
 # Wger API setup (for exercises)
