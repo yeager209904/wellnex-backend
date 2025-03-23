@@ -117,9 +117,7 @@ def chat(request: ChatRequest):
 
 # Health check
 @app.get("/")
-async def read_root():
-    return {"Hello": "World"}
-def root():
+async def root():
     return {"status": "API is running"}
 
 # Run the server
