@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import requests
@@ -11,6 +12,15 @@ load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
+
+# **Add CORS Middleware**
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins, change to specific domains if needed
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -27,8 +37,8 @@ SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
 MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "biceps", "triceps", "abs"]
 DIETARY_CATEGORIES = ["protein", "carbs", "fats", "fiber", "low-calorie", "vegan", "keto", "bulking", "cutting"]
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# **Configure Logging**
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Request model
 class ChatRequest(BaseModel):
@@ -39,6 +49,7 @@ def get_workout(muscles):
     exercises = []
     for muscle in muscles:
         try:
+            logging.info(f"Fetching workout for muscle: {muscle}")
             response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle})
             response.raise_for_status()
             data = response.json()
@@ -59,6 +70,7 @@ def get_meal(nutrients):
     meals = []
     for nutrient in nutrients:
         try:
+            logging.info(f"Fetching meal suggestions for: {nutrient}")
             response = requests.get(SPOONACULAR_API_URL, params={
                 "apiKey": SPOONACULAR_API_KEY,
                 "query": nutrient
@@ -80,6 +92,7 @@ def get_meal(nutrients):
 # AI Response using OpenAI
 def get_ai_response(user_input, chat_history=[]):
     try:
+        logging.info(f"Fetching AI response for: {user_input}")
         chat_history.append({"role": "user", "content": user_input})
         response = client.chat.completions.create(
             model="gpt-4",
@@ -102,6 +115,10 @@ def chat(request: ChatRequest):
     muscles = [word for word in MUSCLE_GROUPS if word in user_input]
     nutrients = [word for word in DIETARY_CATEGORIES if word in user_input]
 
+    logging.info(f"Received user input: {user_input}")
+    logging.info(f"Detected muscles: {muscles}")
+    logging.info(f"Detected nutrients: {nutrients}")
+
     # Get workout suggestions if muscle groups are mentioned
     if muscles:
         workout_response = get_workout(muscles)
@@ -120,8 +137,7 @@ def chat(request: ChatRequest):
     final_response = "\n".join(response_parts)
 
     # **Log request & response**
-    logging.info(f"User Input: {user_input}")
-    logging.info(f"API Response: {final_response}")
+    logging.info(f"Final API Response: {final_response}")
 
     return {"response": final_response}
 
@@ -133,4 +149,5 @@ async def root():
 # Run the server
 if __name__ == "__main__":
     import uvicorn
+    logging.info("Starting FastAPI server...")
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
