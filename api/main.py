@@ -18,31 +18,32 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # Add CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allows all origins, change to specific domains if needed
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
 )
 
-# Wger API setup
+# Wger API setup (for exercises)
 WGER_API_URL = "https://wger.de/api/v2/exercise/"
 WGER_HEADERS = {"Authorization": f"Token {os.getenv('WGER_API_KEY')}"}
 
-# Spoonacular API setup
+# Spoonacular API setup (for nutrition)
 SPOONACULAR_API_URL = "https://api.spoonacular.com/recipes/complexSearch"
 SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
 
-# **Muscle Group Mapping (Names to IDs)**
+# Muscle groups mapped to Wger API muscle IDs
 MUSCLE_GROUPS = {
     "chest": 4,
     "back": 12,
     "legs": 10,
-    "shoulders": 2,
+    "shoulders": 13,
     "biceps": 1,
     "triceps": 5,
     "abs": 6
 }
 
+# Dietary categories for meal recommendations
 DIETARY_CATEGORIES = [
     "protein", "carbs", "fats", "fiber", "low-calorie", "vegan", "keto", "bulking", "cutting"
 ]
@@ -51,12 +52,13 @@ DIETARY_CATEGORIES = [
 class ChatRequest(BaseModel):
     user_input: str
 
-# **Fetch exercises from Wger API using muscle IDs**
-def get_workout(muscle_names):
+# Get workout recommendations
+def get_workout(muscles):
     exercises = []
-    for muscle in muscle_names:
-        muscle_id = MUSCLE_GROUPS.get(muscle)  # Convert name to ID
-        if muscle_id is None:
+    for muscle in muscles:
+        muscle_id = MUSCLE_GROUPS.get(muscle)
+        if not muscle_id:
+            exercises.append(f"No muscle ID found for {muscle}.")
             continue
 
         try:
@@ -75,14 +77,19 @@ def get_workout(muscle_names):
     
     return exercises
 
-# **Fetch meal recommendations**
+# Get meal recommendations
 def get_meal(nutrients):
     meals = []
     for nutrient in nutrients:
         try:
             response = requests.get(
                 SPOONACULAR_API_URL,
-                params={"apiKey": SPOONACULAR_API_KEY, "query": nutrient}
+                params={
+                    "apiKey": SPOONACULAR_API_KEY,
+                    "query": nutrient,
+                    "number": 3,  # Get up to 3 meal suggestions
+                    "addRecipeInformation": True
+                }
             )
             if response.status_code != 200:
                 raise Exception(f"Failed to fetch meal data: {response.status_code}")
@@ -98,25 +105,27 @@ def get_meal(nutrients):
     
     return meals
 
-# **AI Response using OpenAI**
+# AI Response using OpenAI
 def get_ai_response(user_input, chat_history=[]):
     try:
         chat_history.append({"role": "user", "content": user_input})
-        completion = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful AI fitness and nutrition assistant."},
-                *chat_history
-            ],
-        )
+        completion = openai.chat.completions.create(
+             model="gpt-4",
+             messages=[
+                 {
+                     "role": "user",
+                     "content": user_input,
+                 },
+             ],
+         )
 
-        ai_response = completion["choices"][0]["message"]["content"]
+        ai_response = completion.choices[0].message.content
         chat_history.append({"role": "assistant", "content": ai_response})
         return ai_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
-# **Main endpoint**
+# Main endpoint
 @app.post("/chat")
 def chat(request: ChatRequest):
     user_input = request.user_input.lower()
@@ -143,12 +152,13 @@ def chat(request: ChatRequest):
     
     return {"response": "\n".join(response_parts)}
 
-# **Health check**
+# Health check
 @app.get("/")
 async def read_root():
     return {"status": "API is running"}
 
-# **Run the server**
+# Run the server
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
