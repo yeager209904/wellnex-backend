@@ -72,13 +72,22 @@ def get_workout(muscles):
                     response = requests.get(
                         WGER_API_URL, 
                         headers=WGER_HEADERS, 
-                        params={"muscles": muscle_id}
+                        params={"language": 2, "muscles": muscle_id}  # Added language param for English
                     )
                     if response.status_code != 200:
                         raise Exception(f"Failed to fetch workout data: {response.status_code}")
                     
                     data = response.json()
-                    exercises_for_id = [ex["name"] for ex in data.get("results", [])[:2]]
+                    # Debug the structure of the response
+                    if "results" not in data:
+                        raise Exception(f"Unexpected API response structure: {data.keys()}")
+                    
+                    # Extract exercise names safely
+                    exercises_for_id = []
+                    for ex in data.get("results", [])[:2]:
+                        if isinstance(ex, dict) and "name" in ex:
+                            exercises_for_id.append(ex["name"])
+                    
                     all_exercises.extend(exercises_for_id)
                 
                 if all_exercises:
@@ -90,19 +99,45 @@ def get_workout(muscles):
                 response = requests.get(
                     WGER_API_URL, 
                     headers=WGER_HEADERS, 
-                    params={"muscles": muscle_ids}
+                    params={"language": 2, "muscles": muscle_ids}  # Added language param for English
                 )
                 if response.status_code != 200:
                     raise Exception(f"Failed to fetch workout data: {response.status_code}")
                 
                 data = response.json()
-                muscle_exercises = [ex["name"] for ex in data.get("results", [])[:3]]
+                # Debug the structure of the response
+                if "results" not in data:
+                    raise Exception(f"Unexpected API response structure: {data.keys()}")
+                
+                # Extract exercise names safely
+                muscle_exercises = []
+                for ex in data.get("results", [])[:3]:
+                    if isinstance(ex, dict) and "name" in ex:
+                        muscle_exercises.append(ex["name"])
+                
                 if muscle_exercises:
                     exercises.append(f"{muscle.capitalize()} exercises: {', '.join(muscle_exercises)}")
                 else:
                     exercises.append(f"No exercises found for {muscle}.")
         except Exception as e:
             exercises.append(f"Error fetching workout for {muscle}: {str(e)}")
+    
+    # If no exercises were found, provide fallback recommendations
+    if not any("exercises:" in item for item in exercises):
+        if "biceps" in muscles:
+            exercises.append("Biceps exercises: Barbell Curls, Hammer Curls, Preacher Curls")
+        if "triceps" in muscles:
+            exercises.append("Triceps exercises: Tricep Pushdowns, Skull Crushers, Dips")
+        if "chest" in muscles:
+            exercises.append("Chest exercises: Bench Press, Push-ups, Dumbbell Flyes")
+        if "back" in muscles:
+            exercises.append("Back exercises: Pull-ups, Bent-over Rows, Lat Pulldowns")
+        if "shoulders" in muscles:
+            exercises.append("Shoulders exercises: Military Press, Lateral Raises, Face Pulls")
+        if "legs" in muscles:
+            exercises.append("Legs exercises: Squats, Leg Press, Lunges")
+        if "abs" in muscles:
+            exercises.append("Abs exercises: Crunches, Leg Raises, Planks")
     
     return exercises
 
