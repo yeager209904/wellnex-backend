@@ -42,21 +42,65 @@ DIETARY_CATEGORIES = [
 class ChatRequest(BaseModel):
     user_input: str
 
+# Define mapping of muscle names to Wger API muscle IDs
+MUSCLE_ID_MAP = {
+    "chest": 4,       # Pectoralis major
+    "back": [12, 3],  # Latissimus dorsi, Trapezius
+    "legs": [10, 11], # Quadriceps femoris, Biceps femoris (hamstrings)
+    "shoulders": 2,   # Deltoid
+    "biceps": 1,      # Biceps brachii
+    "triceps": 5,     # Triceps brachii
+    "abs": 6          # Rectus abdominis
+}
+
 # Get workout recommendations
 def get_workout(muscles):
     exercises = []
     for muscle in muscles:
         try:
-            response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle})
-            if response.status_code != 200:
-                raise Exception(f"Failed to fetch workout data: {response.status_code}")
-
-            data = response.json()
-            muscle_exercises = [ex["name"] for ex in data.get("results", [])[:3]]
-            if muscle_exercises:
-                exercises.append(f"{muscle.capitalize()} exercises: {', '.join(muscle_exercises)}")
+            # Get the muscle ID(s) from our mapping
+            muscle_ids = MUSCLE_ID_MAP.get(muscle)
+            
+            # If muscle_ids is a list, we need to make multiple requests
+            if not muscle_ids:
+                exercises.append(f"No mapping found for muscle: {muscle}")
+                continue
+                
+            if isinstance(muscle_ids, list):
+                all_exercises = []
+                for muscle_id in muscle_ids:
+                    response = requests.get(
+                        WGER_API_URL, 
+                        headers=WGER_HEADERS, 
+                        params={"muscles": muscle_id}
+                    )
+                    if response.status_code != 200:
+                        raise Exception(f"Failed to fetch workout data: {response.status_code}")
+                    
+                    data = response.json()
+                    exercises_for_id = [ex["name"] for ex in data.get("results", [])[:2]]
+                    all_exercises.extend(exercises_for_id)
+                
+                if all_exercises:
+                    exercises.append(f"{muscle.capitalize()} exercises: {', '.join(all_exercises[:3])}")
+                else:
+                    exercises.append(f"No exercises found for {muscle}.")
             else:
-                exercises.append(f"No exercises found for {muscle}.")
+                # Single muscle ID
+                response = requests.get(
+                    WGER_API_URL, 
+                    headers=WGER_HEADERS, 
+                    params={"muscles": muscle_ids}
+                )
+                if response.status_code != 200:
+                    raise Exception(f"Failed to fetch workout data: {response.status_code}")
+                
+                data = response.json()
+                muscle_exercises = [ex["name"] for ex in data.get("results", [])[:3]]
+                if muscle_exercises:
+                    exercises.append(f"{muscle.capitalize()} exercises: {', '.join(muscle_exercises)}")
+                else:
+                    exercises.append(f"No exercises found for {muscle}.")
         except Exception as e:
             exercises.append(f"Error fetching workout for {muscle}: {str(e)}")
     
