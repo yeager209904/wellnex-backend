@@ -41,7 +41,7 @@ DIETARY_CATEGORIES = [
 ]
 
 # Load the trained model
-model_path = "../optimized_powerlifting_rf_model.pkl"
+model_path = "optimized_powerlifting_rf_model.pkl"
 model = joblib.load(model_path)
 
 # Define request model
