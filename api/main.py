@@ -1,10 +1,9 @@
-from fastapi import FastAPI
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import openai
 import os
 import requests
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
@@ -12,8 +11,8 @@ load_dotenv()
 # Initialize FastAPI
 app = FastAPI()
 
-# OpenAI API setup
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Wger API setup (for exercises)
 WGER_API_URL = "https://wger.de/api/v2/exercise/"
@@ -23,7 +22,7 @@ WGER_HEADERS = {"Authorization": f"Token {os.getenv('WGER_API_KEY')}"}
 SPOONACULAR_API_URL = "https://api.spoonacular.com/recipes/complexSearch"
 SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
 
-# List of muscle groups and nutrients/diets
+# List of muscle groups and dietary categories
 MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "biceps", "triceps", "abs"]
 DIETARY_CATEGORIES = ["protein", "carbs", "fats", "fiber", "low-calorie", "vegan", "keto", "bulking", "cutting"]
 
@@ -78,11 +77,11 @@ def get_meal(nutrients):
 def get_ai_response(user_input, chat_history=[]):
     try:
         chat_history.append({"role": "user", "content": user_input})
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=chat_history
         )
-        ai_response = response['choices'][0]['message']['content']
+        ai_response = response.choices[0].message.content
         chat_history.append({"role": "assistant", "content": ai_response})
         return ai_response
     except Exception as e:
