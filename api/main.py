@@ -89,10 +89,11 @@ def get_meal(nutrients):
 def get_ai_response(user_input, chat_history=[]):
     try:
         chat_history.append({"role": "user", "content": user_input})
-        completion = openai.chat.completions.create(
+        completion = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=[{"role": "user", "content": user_input}]
+            messages=[{"role": "user", "content": user_input}],
         )
+
         ai_response = completion.choices[0].message.content
         chat_history.append({"role": "assistant", "content": ai_response})
         return ai_response
