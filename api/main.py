@@ -38,64 +38,69 @@ DIETARY_CATEGORIES = ["protein", "carbs", "fats", "fiber", "low-calorie", "vegan
 
 # Request model
 class ChatRequest(BaseModel):
- user_input: str
+    user_input: str
 
 # Get workout recommendations
 def get_workout(muscles):
-     exercises = []
-     for muscle in muscles:
-         try:
-             response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle})
-             if response.status_code != 200:
-                 raise Exception(f"Failed to fetch workout data: {response.status_code}")
+    exercises = []
+    for muscle in muscles:
+        try:
+            response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle})
+            if response.status_code != 200:
+                raise Exception(f"Failed to fetch workout data: {response.status_code}")
+            
+            data = response.json()
+            muscle_exercises = [ex["name"] for ex in data.get("results", [])[:3]]
+            if muscle_exercises:
+                exercises.append(f"{muscle.capitalize()} exercises: {', '.join(muscle_exercises)}")
+            else:
+                exercises.append(f"No exercises found for {muscle}.")
+        except Exception as e:
+            exercises.append(f"Error fetching workout for {muscle}: {str(e)}")
     
-             data = response.json()
-             muscle_exercises = [ex["name"] for ex in data.get("results", [])[:3]]
-             if muscle_exercises:
-                 exercises.append(f"{muscle.capitalize()} exercises: {', '.join(muscle_exercises)}")
-             else:
-                 exercises.append(f"No exercises found for {muscle}.")
-         except Exception as e:
-             exercises.append(f"Error fetching workout for {muscle}: {str(e)}")
-    
-     return exercises
+    return exercises
 
 # Get meal recommendations
 def get_meal(nutrients):
-     meals = []
-     for nutrient in nutrients:
-         try:
-             response = requests.get(SPOONACULAR_API_URL, params={
-                 "apiKey": SPOONACULAR_API_KEY,
-                 "query": nutrient
-             })
-             if response.status_code != 200:
-                 raise Exception(f"Failed to fetch meal data: {response.status_code}")
+    meals = []
+    for nutrient in nutrients:
+    try:
+        response = requests.get(SPOONACULAR_API_URL, params={
+         "apiKey": SPOONACULAR_API_KEY,
+         "query": nutrient
+        })
+        if response.status_code != 200:
+            raise Exception(f"Failed to fetch meal data: {response.status_code}")
+        
+        data = response.json()
+        nutrient_meals = [recipe["title"] for recipe in data.get("results", [])[:3]]
+        if nutrient_meals:
+            meals.append(f"{nutrient.capitalize()} meal options: {', '.join(nutrient_meals)}")
+        else:
+            meals.append(f"No meal suggestions found for {nutrient}.")
+    except Exception as e:
+        meals.append(f"Error fetching meal for {nutrient}: {str(e)}")
     
-             data = response.json()
-             nutrient_meals = [recipe["title"] for recipe in data.get("results", [])[:3]]
-             if nutrient_meals:
-                 meals.append(f"{nutrient.capitalize()} meal options: {', '.join(nutrient_meals)}")
-             else:
-                 meals.append(f"No meal suggestions found for {nutrient}.")
-         except Exception as e:
-             meals.append(f"Error fetching meal for {nutrient}: {str(e)}")
-    
-     return meals
+    return meals
 
 # AI Response using OpenAI
 def get_ai_response(user_input, chat_history=[]):
      try:
-         chat_history.append({"role": "user", "content": user_input})
-         response = openai.ChatCompletion.create(
-             model="gpt-4",
-             messages=chat_history
-         )
-         ai_response = response['choices'][0]['message']['content']
-         chat_history.append({"role": "assistant", "content": ai_response})
-         return ai_response
-     except Exception as e:
-         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
+        chat_history.append({"role": "user", "content": user_input})
+        completion = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_input,
+                },
+            ],
+        )
+        ai_response = completion.choices[0].message.content
+        chat_history.append({"role": "assistant", "content": ai_response})
+        return ai_response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
 # Main endpoint
 @app.post("/chat")
