@@ -32,18 +32,8 @@ WGER_HEADERS = {"Authorization": f"Token {os.getenv('WGER_API_KEY')}"}
 SPOONACULAR_API_URL = "https://api.spoonacular.com/recipes/complexSearch"
 SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
 
-# Muscle groups mapped to Wger API muscle IDs
-MUSCLE_GROUPS = {
-    "chest": 4,
-    "back": 12,
-    "legs": 10,
-    "shoulders": 13,
-    "biceps": 1,
-    "triceps": 5,
-    "abs": 6
-}
-
-# Dietary categories for meal recommendations
+# List of muscle groups and nutrients/diets
+MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "biceps", "triceps", "abs"]
 DIETARY_CATEGORIES = [
     "protein", "carbs", "fats", "fiber", "low-calorie", "vegan", "keto", "bulking", "cutting"
 ]
@@ -56,13 +46,8 @@ class ChatRequest(BaseModel):
 def get_workout(muscles):
     exercises = []
     for muscle in muscles:
-        muscle_id = MUSCLE_GROUPS.get(muscle)
-        if not muscle_id:
-            exercises.append(f"No muscle ID found for {muscle}.")
-            continue
-
         try:
-            response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle_id})
+            response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle})
             if response.status_code != 200:
                 raise Exception(f"Failed to fetch workout data: {response.status_code}")
 
@@ -84,12 +69,7 @@ def get_meal(nutrients):
         try:
             response = requests.get(
                 SPOONACULAR_API_URL,
-                params={
-                    "apiKey": SPOONACULAR_API_KEY,
-                    "query": nutrient,
-                    "number": 3,  # Get up to 3 meal suggestions
-                    "addRecipeInformation": True
-                }
+                params={"apiKey": SPOONACULAR_API_KEY, "query": nutrient}
             )
             if response.status_code != 200:
                 raise Exception(f"Failed to fetch meal data: {response.status_code}")
@@ -161,4 +141,5 @@ async def read_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
 
