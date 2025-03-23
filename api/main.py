@@ -64,22 +64,22 @@ def get_workout(muscles):
 def get_meal(nutrients):
     meals = []
     for nutrient in nutrients:
-    try:
-        response = requests.get(SPOONACULAR_API_URL, params={
-         "apiKey": SPOONACULAR_API_KEY,
-         "query": nutrient
-        })
-        if response.status_code != 200:
-            raise Exception(f"Failed to fetch meal data: {response.status_code}")
-        
-        data = response.json()
-        nutrient_meals = [recipe["title"] for recipe in data.get("results", [])[:3]]
-        if nutrient_meals:
-            meals.append(f"{nutrient.capitalize()} meal options: {', '.join(nutrient_meals)}")
-        else:
-            meals.append(f"No meal suggestions found for {nutrient}.")
-    except Exception as e:
-        meals.append(f"Error fetching meal for {nutrient}: {str(e)}")
+        try:
+            response = requests.get(SPOONACULAR_API_URL, params={
+             "apiKey": SPOONACULAR_API_KEY,
+             "query": nutrient
+            })
+            if response.status_code != 200:
+                raise Exception(f"Failed to fetch meal data: {response.status_code}")
+            
+            data = response.json()
+            nutrient_meals = [recipe["title"] for recipe in data.get("results", [])[:3]]
+            if nutrient_meals:
+                meals.append(f"{nutrient.capitalize()} meal options: {', '.join(nutrient_meals)}")
+            else:
+                meals.append(f"No meal suggestions found for {nutrient}.")
+        except Exception as e:
+            meals.append(f"Error fetching meal for {nutrient}: {str(e)}")
     
     return meals
 
