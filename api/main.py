@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
 import requests
+import logging
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -26,6 +27,9 @@ SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
 MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "biceps", "triceps", "abs"]
 DIETARY_CATEGORIES = ["protein", "carbs", "fats", "fiber", "low-calorie", "vegan", "keto", "bulking", "cutting"]
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
 # Request model
 class ChatRequest(BaseModel):
     user_input: str
@@ -36,16 +40,16 @@ def get_workout(muscles):
     for muscle in muscles:
         try:
             response = requests.get(WGER_API_URL, headers=WGER_HEADERS, params={"muscles": muscle})
-            if response.status_code != 200:
-                raise Exception(f"Failed to fetch workout data: {response.status_code}")
-
+            response.raise_for_status()
             data = response.json()
+
             muscle_exercises = [ex["name"] for ex in data.get("results", [])[:3]]
             if muscle_exercises:
                 exercises.append(f"{muscle.capitalize()} exercises: {', '.join(muscle_exercises)}")
             else:
                 exercises.append(f"No exercises found for {muscle}.")
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Workout API error for {muscle}: {str(e)}")
             exercises.append(f"Error fetching workout for {muscle}: {str(e)}")
 
     return exercises
@@ -59,16 +63,16 @@ def get_meal(nutrients):
                 "apiKey": SPOONACULAR_API_KEY,
                 "query": nutrient
             })
-            if response.status_code != 200:
-                raise Exception(f"Failed to fetch meal data: {response.status_code}")
-
+            response.raise_for_status()
             data = response.json()
+
             nutrient_meals = [recipe["title"] for recipe in data.get("results", [])[:3]]
             if nutrient_meals:
                 meals.append(f"{nutrient.capitalize()} meal options: {', '.join(nutrient_meals)}")
             else:
                 meals.append(f"No meal suggestions found for {nutrient}.")
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Nutrition API error for {nutrient}: {str(e)}")
             meals.append(f"Error fetching meal for {nutrient}: {str(e)}")
 
     return meals
@@ -85,9 +89,10 @@ def get_ai_response(user_input, chat_history=[]):
         chat_history.append({"role": "assistant", "content": ai_response})
         return ai_response
     except Exception as e:
+        logging.error(f"AI generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
-# Main endpoint
+# Main chat endpoint
 @app.post("/chat")
 def chat(request: ChatRequest):
     user_input = request.user_input.lower()
@@ -112,7 +117,13 @@ def chat(request: ChatRequest):
         ai_response = get_ai_response(user_input)
         response_parts.append(ai_response)
 
-    return {"response": "\n".join(response_parts)}
+    final_response = "\n".join(response_parts)
+
+    # **Log request & response**
+    logging.info(f"User Input: {user_input}")
+    logging.info(f"API Response: {final_response}")
+
+    return {"response": final_response}
 
 # Health check
 @app.get("/")
