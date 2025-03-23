@@ -1,8 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+import openai
 import os
 import requests
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
@@ -10,9 +12,9 @@ load_dotenv()
 # Initialize FastAPI
 app = FastAPI()
 
-# Groq API setup
-GROQ_API_KEY = os.getenv("GROQ_API_KEY_1")
-GROQ_API_URL = "https://api.groq.com/v1/chat/completions"
+# OpenAI API setup
+openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI()
 
 # Wger API setup (for exercises)
 WGER_API_URL = "https://wger.de/api/v2/exercise/"
@@ -30,40 +32,28 @@ DIETARY_CATEGORIES = ["protein", "carbs", "fats", "fiber", "low-calorie", "vegan
 class ChatRequest(BaseModel):
     user_input: str
 
-# Get AI response using Groq API
-@app.post("/test_groq")
-def test_groq():
+# Get AI response using OpenAI
+@app.post("/test_openai")
+def test_openai():
     try:
-        headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "mixtral-8x7b-32768",
-            "messages": [{"role": "user", "content": "Say this is a test"}],
-            "max_tokens": 7,
-            "temperature": 0
-        }
-        
-        response = requests.post(GROQ_API_URL, json=data, headers=headers)
-        response_json = response.json()
-
-        # Debugging: Print full response
-        print("Groq API Response:", response_json)
-
-        # Ensure JSON response format
-        return {"response": response_json["choices"][0]["message"]["content"].strip()}
-    
+        response = client.completions.create(
+            model="gpt-3.5-turbo-instruct",
+            prompt="Say this is a test",
+            max_tokens=7,
+            temperature=0
+        )
+        return {"response": response.choices[0].text.strip()}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Groq API request failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenAI request failed: {str(e)}")
 
 # Health check
 @app.get("/")
 def root():
     return {"status": "API is running"}
 
-
 # Run the server
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+
