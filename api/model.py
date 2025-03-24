@@ -1,10 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import openai
 import os
-import requests
-from dotenv import load_dotenv
 import joblib
 import numpy as np
 
@@ -13,9 +10,6 @@ load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
-
-# OpenAI API setup
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Add CORS Middleware
 app.add_middleware(
