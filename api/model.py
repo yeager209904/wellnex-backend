@@ -5,9 +5,6 @@ import os
 import joblib
 import numpy as np
 
-# Load environment variables
-load_dotenv()
-
 # Initialize FastAPI
 app = FastAPI()
 
