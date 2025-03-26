@@ -1,9 +1,0 @@
-annotated-types==0.6.0
-fastapi==0.109.0
-pydantic==2.6.0
-pydantic_core==2.16.1
-requests
-uvicorn
-joblib
-numpy
-scikit-learn
